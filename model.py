@@ -26,25 +26,45 @@ class Model():
 
         self.keep_prob = tf.placeholder(tf.float32, name='self.keep_prob')
 
+        lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self.dim_embedding, forget_bias=0.0, state_is_tuple=True)
+        if self.keep_prob < 1:  # 在外面包裹一层dropout
+            lstm_cell = tf.nn.rnn_cell.DropoutWrapper(
+                lstm_cell, output_keep_prob=self.keep_prob)
+
+        cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * self.rnn_layers, state_is_tuple=True)  # 多层lstm cell 堆叠起来
+
+        self._initial_state = cell.zero_state(self.batch_size, tf.float32)  # 参数初始化,rnn_cell.RNNCell.zero_state
+
         with tf.variable_scope('embedding'):
             if embedding_file:
                 # if embedding file provided, use it.
                 embedding = np.load(embedding_file)
-                embed = tf.constant(embedding, name='embedding')
+                embeddings = tf.constant(embedding, name='embedding')
             else:
                 # if not, initialize an embedding and train it.
-                embed = tf.get_variable(
+                embeddings = tf.get_variable(
                     'embedding', [self.num_words, self.dim_embedding])
-                tf.summary.histogram('embed', embed)
+                tf.summary.histogram('embeddings', embeddings)
 
-            data = tf.nn.embedding_lookup(embed, self.X)
+            embed = tf.nn.embedding_lookup(embeddings, self.X)
+
+            if self.keep_prob < 1:
+                embed = tf.nn.dropout(embed, self.keep_prob)
+
+        outputs_tensor = []
+        state = self._initial_state  # state 表示 各个batch中的状态
 
         with tf.variable_scope('rnn'):
             ##################
-            # Your Code here
+            # My Code here
             ##################
+            for time_step in range(self.num_steps):
+                if time_step > 0: tf.get_variable_scope().reuse_variables()
+                # cell_out: [batch, hidden_size]
+                (cell_output, state) = cell(embed[:, time_step, :], state)
+                outputs_tensor.append(cell_output)  # output: shape[num_steps][batch,hidden_size]
 
-        # concate every time step
+            # concate every time step
         seq_output = tf.concat(outputs_tensor, 1)
 
         # flatten it
@@ -52,8 +72,14 @@ class Model():
 
         with tf.variable_scope('softmax'):
             ##################
-            # Your Code here
+            # My Code here
             ##################
+            # softmax_w , shape=[hidden_size, vocab_size], 用于将distributed表示的单词转化为one-hot表示
+            softmax_w = tf.get_variable(
+                "softmax_w", [self.dim_embedding, self.num_words], dtype=tf.float32)
+            softmax_b = tf.get_variable("softmax_b", [self.num_words], dtype=tf.float32)
+            # [batch*numsteps, vocab_size] 从隐藏语义转化成完全表示
+            logits = tf.matmul(outputs_tensor, softmax_w) + softmax_b
 
         tf.summary.histogram('logits', logits)
 
