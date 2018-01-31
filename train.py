@@ -23,11 +23,11 @@ vocabulary = read_data(FLAGS.text)
 print('Data size', len(vocabulary))
 
 
-with open(FLAGS.dictionary, encoding='utf-8') as inf:
-    dictionary = json.load(inf, encoding='utf-8')
-
-with open(FLAGS.reverse_dictionary, encoding='utf-8') as inf:
-    reverse_dictionary = json.load(inf, encoding='utf-8')
+# with open(FLAGS.dictionary, encoding='utf-8') as inf:
+#     dictionary = json.load(inf, encoding='utf-8')
+#
+# with open(FLAGS.reverse_dictionary, encoding='utf-8') as inf:
+#     reverse_dictionary = json.load(inf, encoding='utf-8')
 
 
 model = Model(learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps)
@@ -56,7 +56,7 @@ with tf.Session() as sess:
 
     for x in range(1):
         logging.debug('epoch [{0}]....'.format(x))
-        state = sess.run(model.state_tensor)
+        state = sess.run(model._initial_state)
         for datadict in utils.get_train_data(vocabulary, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps):
 
             ##################
@@ -64,7 +64,7 @@ with tf.Session() as sess:
             ##################
 
             gs, _, state, l, summary_string = sess.run(
-                [model.global_step, model.optimizer, model.outputs_state_tensor, model.loss, model.merged_summary_op], feed_dict=datadict)
+                [model.global_step, model.optimizer,  model.loss, model.merged_summary_op], feed_dict=datadict)
             summary_string_writer.add_summary(summary_string, gs)
 
             if gs % 10 == 0:

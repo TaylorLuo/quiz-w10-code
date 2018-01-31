@@ -47,8 +47,8 @@ def get_train_data(vocabulary, batch_size, num_steps):
     for step in xrange(num_steps):
         datadict = dict()
         global data_index
-        assert batch_size % num_steps == 0
-        assert num_steps <= 2 * skip_window
+        # assert batch_size % num_steps == 0
+        # assert num_steps <= 2 * skip_window
         batch = np.ndarray(shape=(batch_size), dtype=np.int32)
         labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
         span = 2 * skip_window + 1  # [ skip_window target skip_window ]
@@ -74,6 +74,7 @@ def get_train_data(vocabulary, batch_size, num_steps):
         data_index = (data_index + len(data) - span) % len(data)
         datadict['train_inputs'] = batch
         datadict['train_labels'] = labels
+        datadict['reverse_dictionary'] = reverse_dictionary
         datalist.append(datadict)
 
     return datalist

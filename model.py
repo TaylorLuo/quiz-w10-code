@@ -27,9 +27,10 @@ class Model():
         self.keep_prob = tf.placeholder(tf.float32, name='self.keep_prob')
 
         lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self.dim_embedding, forget_bias=0.0, state_is_tuple=True)
-        if self.keep_prob < 1:  # 在外面包裹一层dropout
-            lstm_cell = tf.nn.rnn_cell.DropoutWrapper(
-                lstm_cell, output_keep_prob=self.keep_prob)
+
+        # if self.keep_prob < 1:  # 在外面包裹一层dropout
+        #     lstm_cell = tf.nn.rnn_cell.DropoutWrapper(
+        #         lstm_cell, output_keep_prob=self.keep_prob)
 
         cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * self.rnn_layers, state_is_tuple=True)  # 多层lstm cell 堆叠起来
 
@@ -48,8 +49,8 @@ class Model():
 
             embed = tf.nn.embedding_lookup(embeddings, self.X)
 
-            if self.keep_prob < 1:
-                embed = tf.nn.dropout(embed, self.keep_prob)
+            # if self.keep_prob < 1:
+            #     embed = tf.nn.dropout(embed, self.keep_prob)
 
         outputs_tensor = []
         state = self._initial_state  # state 表示 各个batch中的状态
@@ -79,7 +80,7 @@ class Model():
                 "softmax_w", [self.dim_embedding, self.num_words], dtype=tf.float32)
             softmax_b = tf.get_variable("softmax_b", [self.num_words], dtype=tf.float32)
             # [batch*numsteps, vocab_size] 从隐藏语义转化成完全表示
-            logits = tf.matmul(outputs_tensor, softmax_w) + softmax_b
+            logits = tf.matmul(seq_output_final, softmax_w) + softmax_b
 
         tf.summary.histogram('logits', logits)
 
