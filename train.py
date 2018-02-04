@@ -23,6 +23,7 @@ vocabulary = read_data(FLAGS.text)
 print('Data size', len(vocabulary))
 
 
+# 在tinymind上运行时 将注释解开
 # with open(FLAGS.dictionary, encoding='utf-8') as inf:
 #     dictionary = json.load(inf, encoding='utf-8')
 #
@@ -32,10 +33,6 @@ print('Data size', len(vocabulary))
 
 model = Model(learning_rate=FLAGS.learning_rate, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps)
 model.build()
-
-# Input data.
-train_inputs = tf.placeholder(tf.int32, shape=[FLAGS.batch_size])
-train_labels = tf.placeholder(tf.int32, shape=[FLAGS.batch_size, 1])
 
 
 with tf.Session() as sess:
@@ -56,15 +53,16 @@ with tf.Session() as sess:
 
     for x in range(1):
         logging.debug('epoch [{0}]....'.format(x))
-        state = sess.run(model._initial_state)
-        for datadict in utils.get_train_data(vocabulary, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps):
+        state = sess.run(model.state_tensor)
+        for batch, labels in utils.get_train_data(vocabulary, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps):
 
             ##################
             # My Code here
             ##################
-
+            # feed_dict = {train_inputs: datadict['train_inputs'], train_labels: datadict['train_labels']}
+            feed_dict = {model.X: batch, model.Y: labels}
             gs, _, state, l, summary_string = sess.run(
-                [model.global_step, model.optimizer,  model.loss, model.merged_summary_op], feed_dict=datadict)
+                [model.global_step, model.optimizer, model.outputs_state_tensor, model.loss, model.merged_summary_op], feed_dict=feed_dict)
             summary_string_writer.add_summary(summary_string, gs)
 
             if gs % 10 == 0:

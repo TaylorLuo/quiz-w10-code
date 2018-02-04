@@ -29,6 +29,7 @@ import numpy as np
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+from flags import parse_args
 
 # Step 1: Download the data.
 url = 'http://mattmahoney.net/dc/'
@@ -51,30 +52,44 @@ def maybe_download(filename, expected_bytes):
   return local_filename
 
 
-filename = maybe_download('text8.zip', 31344016)
+# filename = maybe_download('text8.zip', 31344016)
 
 
 # Read the data into a list of strings.
-def read_data(filename):
-  """Extract the first file enclosed in a zip file as a list of words."""
-  with zipfile.ZipFile(filename) as f:
-    data = tf.compat.as_str(f.read(f.namelist()[0])).split()
-  return data
+# def read_data(filename):
+#   """Extract the first file enclosed in a zip file as a list of words."""
+#   with zipfile.ZipFile(filename) as f:
+#     data = tf.compat.as_str(f.read(f.namelist()[0])).split()
+#   return data
 
-vocabulary = read_data(filename)
+def read_data(filename):
+    with open(filename, encoding="utf-8") as f:
+        data = f.read()
+    data = list(data)
+    return data
+
+# vocabulary = read_data(filename)
+# print('Data size', len(vocabulary))
+
+FLAGS, unparsed = parse_args()
+vocabulary = read_data(FLAGS.text)
 print('Data size', len(vocabulary))
 
 # Step 2: Build the dictionary and replace rare words with UNK token.
-vocabulary_size = 50000
+vocabulary_size = 5000
 
-
+#将words集合中的单词按频数排序，将频率最高的前n_words-1个单词以及他们的出现的个数按顺序输出到count中，
+# 将频数排在n_words-1之后的单词设为UNK。同时，count的规律为索引越小，单词出现的频率越高
 def build_dataset(words, n_words):
   """Process raw inputs into a dataset."""
   count = [['UNK', -1]]
+  # most_common方法： 去top5000的频数的单词，创建一个dict,放进去。以词频排序
   count.extend(collections.Counter(words).most_common(n_words - 1))
   dictionary = dict()
   for word, _ in count:
     dictionary[word] = len(dictionary)
+  # 全部单词转为编号
+  # 先判断这个单词是否出现在dictionary，如果是，就转成编号，如果不是，则转为编号0（代表UNK）
   data = list()
   unk_count = 0
   for word in words:
@@ -94,37 +109,43 @@ def build_dataset(words, n_words):
 # reverse_dictionary - maps codes(integers) to words(strings)
 data, count, dictionary, reverse_dictionary = build_dataset(vocabulary,
                                                             vocabulary_size)
-del vocabulary  # Hint to reduce memory.
+del vocabulary  # Hint to reduce memory. 删除原始单词列表，节约内存
 print('Most common words (+UNK)', count[:5])
 print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
 
 data_index = 0
 
+#这个函数的功能是对数据data中的每个单词，分别与前一个单词和后一个单词生成一个batch，
+# 即[data[1],data[0]]和[data[1],data[2]]，其中当前单词data[1]存在batch中，前后单词存在labels中
 # Step 3: Function to generate a training batch for the skip-gram model.
 def generate_batch(batch_size, num_skips, skip_window):
   global data_index
-  assert batch_size % num_skips == 0
-  assert num_skips <= 2 * skip_window
-  batch = np.ndarray(shape=(batch_size), dtype=np.int32)
-  labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32)
+  assert batch_size % num_skips == 0  #batch_size必须是num_skips的整数倍,这样可以确保由一个目标词汇生成的样本在同一个批次中。
+  assert num_skips <= 2 * skip_window #可以联系的距离（skip_window）必须满足每个单词生成样本数量（num_skips）的要求，即可以联系的距离（可以往左也可以往右，所以×2）要大于等于要生成样本数量
+  batch = np.ndarray(shape=(batch_size), dtype=np.int32) #建一个batch大小的数组，保存任意单词
+  labels = np.ndarray(shape=(batch_size, 1), dtype=np.int32) #建一个（batch，1）大小的二位数组，保存任意单词前一个或者后一个单词，从而形成一个pair
   span = 2 * skip_window + 1  # [ skip_window target skip_window ]
-  buffer = collections.deque(maxlen=span)
-  if data_index + span > len(data):
+  buffer = collections.deque(maxlen=span) #deque还可以设置队列的长度，使用 deque(maxlen=N) 构造函数会新建一个固定大小的队列。当新的元素加入并且这个队列已满的时候， 最老的元素会自动被移除掉
+  if data_index + span > len(data): #如果索引超过了数据长度，则重新从数据头部开始
     data_index = 0
-  buffer.extend(data[data_index:data_index + span])
-  data_index += span
-  for i in range(batch_size // num_skips):
-    context_words = [w for w in range(span) if w != skip_window]
+  buffer.extend(data[data_index:data_index + span]) #将数据index到index+3段赋值给buffer，大小刚好为span
+  data_index += span  #将index向后移3位
+  for i in range(batch_size // num_skips):   #128//2 四舍五入       每个批次训练样本数量//每个单词生成样本数量  即要遍历几个单词
+    context_words = [w for w in range(span) if w != skip_window]  #[0,2]
     words_to_use = random.sample(context_words, num_skips)
     for j, context_word in enumerate(words_to_use):
       batch[i * num_skips + j] = buffer[skip_window]
       labels[i * num_skips + j, 0] = buffer[context_word]
-    if data_index == len(data):
-      buffer[:] = data[:span]
+    if data_index == len(data): #  如果到达数据尾部
+      # buffer[:] = data[:span] #重新开始，将数据前三位存入buffer中，也就是说，是从数据第二个单词开始的
+      # 简单理解就是，不断累加的data_index等于len(data)是，就是滑窗滑到最后3个字母了
+      # 这时要把他们匹配成batch和labels,就需要都放到deque中去，巴拉巴拉
+      for word in data[:span]: # 取最后3个字母
+        buffer.append(word)    # 塞到deque中，将原来的挤出去
       data_index = span
     else:
-      buffer.append(data[data_index])
-      data_index += 1
+      buffer.append(data[data_index]) # 在循环遍历单词时，新加入一个单词，把后面一个单词从deque中挤出去，滑窗后移1位
+      data_index += 1 # 下标加1
   # Backtrack a little bit to avoid skipping words in the end of a batch
   data_index = (data_index + len(data) - span) % len(data)
   return batch, labels
@@ -136,10 +157,16 @@ for i in range(8):
 
 # Step 4: Build and train a skip-gram model.
 
-batch_size = 128
+batch_size = 128      #每个批次训练多少样本
+
 embedding_size = 128  # Dimension of the embedding vector.
+
 skip_window = 1       # How many words to consider left and right.
+                      # 单词最远可以联系的距离（本次实验设为1，即目标单词只能和相邻的两个单词生成样本），2*skip_window>=num_skips
+
 num_skips = 2         # How many times to reuse an input to generate a label.
+                      #为每个单词生成多少样本（本次实验是2个），batch_size必须是num_skips的整数倍,这样可以确保由一个目标词汇生成的样本在同一个批次中。
+
 num_sampled = 64      # Number of negative examples to sample.
 
 # We pick a random validation set to sample nearest neighbors. Here we limit the

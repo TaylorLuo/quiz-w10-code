@@ -21,7 +21,7 @@ def parse_args(check=True):
     parser.add_argument('--num_steps', type=int, default=32,
                         help='number of time steps of one sample.')
 
-    parser.add_argument('--batch_size', type=int, default=3,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='batch size to use.')
 
     parser.add_argument('--dictionary', type=str, default='dictionary.json',

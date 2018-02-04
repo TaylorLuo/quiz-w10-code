@@ -34,26 +34,26 @@ class Model():
 
         cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * self.rnn_layers, state_is_tuple=True)  # 多层lstm cell 堆叠起来
 
-        self._initial_state = cell.zero_state(self.batch_size, tf.float32)  # 参数初始化,rnn_cell.RNNCell.zero_state
+        self.state_tensor = cell.zero_state(self.batch_size, tf.float32)  # 参数初始化,rnn_cell.RNNCell.zero_state
 
         with tf.variable_scope('embedding'):
             if embedding_file:
                 # if embedding file provided, use it.
                 embedding = np.load(embedding_file)
-                embeddings = tf.constant(embedding, name='embedding')
+                embed = tf.constant(embedding, name='embedding')
             else:
                 # if not, initialize an embedding and train it.
-                embeddings = tf.get_variable(
+                embed = tf.get_variable(
                     'embedding', [self.num_words, self.dim_embedding])
-                tf.summary.histogram('embeddings', embeddings)
+                tf.summary.histogram('embeddings', embed)
 
-            embed = tf.nn.embedding_lookup(embeddings, self.X)
+                data = tf.nn.embedding_lookup(embed, self.X)
 
             # if self.keep_prob < 1:
             #     embed = tf.nn.dropout(embed, self.keep_prob)
 
         outputs_tensor = []
-        state = self._initial_state  # state 表示 各个batch中的状态
+        state = self.state_tensor  # state 表示 各个batch中的状态
 
         with tf.variable_scope('rnn'):
             ##################
@@ -62,10 +62,11 @@ class Model():
             for time_step in range(self.num_steps):
                 if time_step > 0: tf.get_variable_scope().reuse_variables()
                 # cell_out: [batch, hidden_size]
-                (cell_output, state) = cell(embed[:, time_step, :], state)
+                (cell_output, state) = cell(data[:, time_step, :], state)
                 outputs_tensor.append(cell_output)  # output: shape[num_steps][batch,hidden_size]
 
-            # concate every time step
+        self.outputs_state_tensor = state
+        # concate every time step
         seq_output = tf.concat(outputs_tensor, 1)
 
         # flatten it
