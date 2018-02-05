@@ -15,7 +15,7 @@ def parse_args(check=True):
     parser.add_argument('--output_dir', type=str, default='./rnn_log',
                         help='path to save log and checkpoint.')
 
-    parser.add_argument('--text', type=str, default='QuanSongCi.txt',
+    parser.add_argument('--text', type=str, default='QuanSongCi.txt.bak',
                         help='path to QuanSongCi.txt')
 
     parser.add_argument('--num_steps', type=int, default=32,

@@ -137,29 +137,37 @@ def generate_batch(batch_size, num_skips, skip_window):
       batch[i * num_skips + j] = buffer[skip_window]
       labels[i * num_skips + j, 0] = buffer[context_word]
     if data_index == len(data): #  如果到达数据尾部
-      # buffer[:] = data[:span] #重新开始，将数据前三位存入buffer中，也就是说，是从数据第二个单词开始的
-      # 简单理解就是，不断累加的data_index等于len(data)是，就是滑窗滑到最后3个字母了
+      # buffer[:] = data[:span] #重新开始，将数据前三位存入buffer中
+      # 简单理解就是，不断累加的data_index等于len(data)时，就是滑窗滑到最后3个字母了
       # 这时要把他们匹配成batch和labels,就需要都放到deque中去，巴拉巴拉
       for word in data[:span]: # 取最后3个字母
         buffer.append(word)    # 塞到deque中，将原来的挤出去
-      data_index = span
+      data_index = span        # 如此往复循环，当语料太少时，会重复生成
     else:
       buffer.append(data[data_index]) # 在循环遍历单词时，新加入一个单词，把后面一个单词从deque中挤出去，滑窗后移1位
+      if data_index == 13:
+        print("date_index= %d " % data_index)
       data_index += 1 # 下标加1
+    if i == 62:
+      print("i= %d" % i)
   # Backtrack a little bit to avoid skipping words in the end of a batch
   data_index = (data_index + len(data) - span) % len(data)
+  # 一下子想不过来，分两下子想：1.如果(batch_size/num_skips)%(len(date)-num_skips)整除
+  # 即data_index == len(data)时刚好够batch_size个样本，此时data_index=span=3
+  # 2.如果不整除，则data_index=余数+span
+  # 但是下次生成batch_size个样本时，要从头开始，然鹅，132行，每次大循环开始都向后移动了3位，所以这里要向前回退3位，否则就不对了
   return batch, labels
 
-batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
-for i in range(8):
-  print(batch[i], reverse_dictionary[batch[i]],
-        '->', labels[i, 0], reverse_dictionary[labels[i, 0]])
+# batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
+# for i in range(8):
+#   print(batch[i], reverse_dictionary[batch[i]],
+#         '->', labels[i, 0], reverse_dictionary[labels[i, 0]])
 
 # Step 4: Build and train a skip-gram model.
 
 batch_size = 128      #每个批次训练多少样本
 
-embedding_size = 128  # Dimension of the embedding vector.
+embedding_size = 128  # Dimension of the embedding vector. 要生成的词向量维度
 
 skip_window = 1       # How many words to consider left and right.
                       # 单词最远可以联系的距离（本次实验设为1，即目标单词只能和相邻的两个单词生成样本），2*skip_window>=num_skips
@@ -173,9 +181,9 @@ num_sampled = 64      # Number of negative examples to sample.
 # validation samples to the words that have a low numeric ID, which by
 # construction are also the most frequent. These 3 variables are used only for
 # displaying model accuracy, they don't affect calculation.
-valid_size = 16     # Random set of words to evaluate similarity on.
-valid_window = 100  # Only pick dev samples in the head of the distribution.
-valid_examples = np.random.choice(valid_window, valid_size, replace=False)
+valid_size = 16     # Random set of words to evaluate similarity on. 抽取的验证单词数
+valid_window = 100  # Only pick dev samples in the head of the distribution. 验证单词只从频率最高的100个单词中获取
+valid_examples = np.random.choice(valid_window, valid_size, replace=False) # 不重复的从0-99里选择16个index
 
 
 graph = tf.Graph()
@@ -190,14 +198,19 @@ with graph.as_default():
   # Ops and variables pinned to the CPU because of missing GPU implementation
   with tf.device('/cpu:0'):
     # Look up embeddings for inputs.
+    # 初始化 embedding vector [5000, 128]
     embeddings = tf.Variable(
-        tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+        tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0)) # tf.random_uniform([vocabulary_size, embedding_size], -1.0, 1.0))
+    # 生成均匀分布平均数，范围为[-1.0,1.0]
+    # 使用tf.nn.embedding_lookup(embedding, train_inputs)查找输入train_input对应的embed
     embed = tf.nn.embedding_lookup(embeddings, train_inputs)
 
     # Construct the variables for the NCE loss
+    # 用tf.truncated_normal(截断正态分布随机数)初始化nce_weights
     nce_weights = tf.Variable(
         tf.truncated_normal([vocabulary_size, embedding_size],
                             stddev=1.0 / math.sqrt(embedding_size)))
+    # nce_biases初始化为0
     nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
 
   # Compute the average NCE loss for the batch.
@@ -214,15 +227,19 @@ with graph.as_default():
                      num_classes=vocabulary_size))
 
   # Construct the SGD optimizer using a learning rate of 1.0.
+  # 学习率为1.0，L2范式标准化后的enormalized_embedding
   optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss)
 
   # Compute the cosine similarity between minibatch examples and all embeddings.
+  # 通过cos方式来测试  两个之间的相似性，与向量的长度没有关系
   norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
+
+  # 除以其L2范数后得到标准化后的normalized_embeddings
   normalized_embeddings = embeddings / norm
-  valid_embeddings = tf.nn.embedding_lookup(
-      normalized_embeddings, valid_dataset)
-  similarity = tf.matmul(
-      valid_embeddings, normalized_embeddings, transpose_b=True)
+  # 获取16个验证单词的词向量
+  valid_embeddings = tf.nn.embedding_lookup(normalized_embeddings, valid_dataset)
+  # 计算验证单词的嵌入向量与词汇表中所有单词的相似性
+  similarity = tf.matmul(valid_embeddings, normalized_embeddings, transpose_b=True)
 
   # Add variable initializer.
   init = tf.global_variables_initializer()
