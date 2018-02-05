@@ -101,7 +101,6 @@ def build_dataset(words, n_words):
     count[0][1] = unk_count
     reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 
-    # 保存json文件，供后面拿到tinymind上训练RNN使用
     with open('dictionary.json', 'w') as file_object:
         json.dump(dictionary, file_object)
     with open('reverse_dictionary.json', 'w') as file_object:

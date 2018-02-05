@@ -145,11 +145,7 @@ def generate_batch(batch_size, num_skips, skip_window):
       data_index = span        # 如此往复循环，当语料太少时，会重复生成
     else:
       buffer.append(data[data_index]) # 在循环遍历单词时，新加入一个单词，把后面一个单词从deque中挤出去，滑窗后移1位
-      if data_index == 13:
-        print("date_index= %d " % data_index)
       data_index += 1 # 下标加1
-    if i == 62:
-      print("i= %d" % i)
   # Backtrack a little bit to avoid skipping words in the end of a batch
   data_index = (data_index + len(data) - span) % len(data)
   # 一下子想不过来，分两下子想：1.如果(batch_size/num_skips)%(len(date)-num_skips)整除
@@ -239,6 +235,9 @@ with graph.as_default():
   # 获取16个验证单词的词向量
   valid_embeddings = tf.nn.embedding_lookup(normalized_embeddings, valid_dataset)
   # 计算验证单词的嵌入向量与词汇表中所有单词的相似性
+  # 对矩阵a和矩阵b进行乘法，也就是a * b。两个参数输入必须是矩阵形式（张量的行列大于2），符合矩阵乘法的前后矩阵行列形式，
+  # 包括转置之后。两个矩阵必须具有相同的数据类型，支持的数据类型：float16, float32, float64, int32, complex64, complex128。
+  # 也可以通过参数 transpose_a或transpose_b来设置矩阵在乘法之前进行转置，这时这些标志位应该设置为True，默认是False。
   similarity = tf.matmul(valid_embeddings, normalized_embeddings, transpose_b=True)
 
   # Add variable initializer.
@@ -263,15 +262,15 @@ with tf.Session(graph=graph) as session:
     _, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
     average_loss += loss_val
 
-    if step % 2000 == 0:
+    if step % 200 == 0:
       if step > 0:
-        average_loss /= 2000
+        average_loss /= 200
       # The average loss is an estimate of the loss over the last 2000 batches.
       print('Average loss at step ', step, ': ', average_loss)
       average_loss = 0
 
     # Note that this is expensive (~20% slowdown if computed every 500 steps)
-    if step % 10000 == 0:
+    if step % 1000 == 0:
       sim = similarity.eval()
       for i in xrange(valid_size):
         valid_word = reverse_dictionary[valid_examples[i]]
