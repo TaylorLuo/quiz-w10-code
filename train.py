@@ -22,6 +22,8 @@ logging.basicConfig(
 vocabulary = read_data(FLAGS.text)
 print('Data size', len(vocabulary))
 
+utils.build_dataset(vocabulary, 5000)
+
 
 with open(FLAGS.dictionary, encoding='utf-8') as inf:
     dictionary = json.load(inf, encoding='utf-8')
@@ -53,12 +55,12 @@ with tf.Session() as sess:
     for x in range(1):
         logging.debug('epoch [{0}]....'.format(x))
         state = sess.run(model.state_tensor)
-        for batch, labels in utils.get_train_data(vocabulary, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps):
+        for dl in utils.get_train_data(vocabulary, batch_size=FLAGS.batch_size, num_steps=FLAGS.num_steps):
 
             ##################
             # My Code here
             ##################
-            feed_dict = {model.X: batch, model.Y: labels, model.state_tensor:state}
+            feed_dict = {model.X: dl['train_inputs'], model.Y: dl['train_labels'], model.state_tensor: state}
             gs, _, state, l, summary_string = sess.run(
                 [model.global_step, model.optimizer, model.outputs_state_tensor, model.loss, model.merged_summary_op], feed_dict=feed_dict)
             summary_string_writer.add_summary(summary_string, gs)

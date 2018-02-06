@@ -55,14 +55,21 @@ class Model():
             cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * self.rnn_layers, state_is_tuple=True)  # 多层lstm cell 堆叠起来
             print(cell.state_size)
             self.state_tensor = cell.zero_state(self.batch_size, tf.float32)  # 参数初始化,rnn_cell.RNNCell.zero_state
+            # outputs [batch_size, num_steps, dim_embedding] 即[128, 32, 128]
             outputs, last_state = tf.nn.dynamic_rnn(cell, data, initial_state=self.state_tensor)
             self.outputs_state_tensor = last_state
+
+
+        # concate every time step
+        seq_output = tf.concat(outputs, 1)
+
+        # flatten it
+        seq_output_final = tf.reshape(seq_output, [-1, self.dim_embedding])
 
         ####################
         # My Code here end #
         ####################
 
-        outputs = tf.reshape(outputs, [-1, self.dim_embedding])
 
         with tf.variable_scope('softmax'):
             ######################
@@ -73,13 +80,15 @@ class Model():
                 "softmax_w", [self.dim_embedding, self.num_words], dtype=tf.float32)
             softmax_b = tf.get_variable("softmax_b", [self.num_words], dtype=tf.float32)
             # [batch*numsteps, vocab_size] 从隐藏语义转化成完全表示
-            logits = tf.matmul(outputs, softmax_w) + softmax_b
+            logits = tf.matmul(seq_output_final, softmax_w) + softmax_b
 
 
 
         ####################
         # My Code here end #
         ####################
+
+
         tf.summary.histogram('logits', logits)
 
         self.predictions = tf.nn.softmax(logits, name='predictions')

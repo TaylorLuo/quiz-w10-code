@@ -39,22 +39,21 @@ def get_train_data(vocabulary, batch_size, num_steps):
     # My Code here
     ##################
 
+    dl = list()
     data, count, dictionary, reverse_dictionary = build_dataset(vocabulary,
                                                                 vocabulary_size)
-
-
     del vocabulary  # Hint to reduce memory.
     print('Most common words (+UNK)', count[:5])
     print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
     # datalist = list()
 
+    batch = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
+    labels = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
     for step in xrange(num_steps):
-        # datadict = dict()
+        datadict = {}
         global data_index
         # assert batch_size % num_steps == 0
         # assert num_steps <= 2 * skip_window
-        batch = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
-        labels = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
         span = 2 * skip_window + 1  # [ skip_window target skip_window ]
         buffer = collections.deque(maxlen=span)
 
@@ -66,8 +65,8 @@ def get_train_data(vocabulary, batch_size, num_steps):
             context_words = [w for w in range(span) if w != skip_window]
             words_to_use = random.sample(context_words, num_skips)
             for j, context_word in enumerate(words_to_use):
-                batch[i * num_skips + j] = buffer[skip_window]
-                labels[i * num_skips + j, 0] = buffer[context_word]
+                batch[i * num_skips + j, step] = buffer[skip_window]
+                labels[i * num_skips + j, step] = buffer[context_word]
             if data_index == len(data):
                 buffer[:] = data[:span]
                 data_index = span
@@ -76,13 +75,12 @@ def get_train_data(vocabulary, batch_size, num_steps):
                 data_index += 1
         # Backtrack a little bit to avoid skipping words in the end of a batch
         data_index = (data_index + len(data) - span) % len(data)
-        # datadict['train_inputs'] = batch
-        # datadict['train_labels'] = labels
-        # datalist.append(datadict)
+        datadict['train_inputs'] = batch
+        datadict['train_labels'] = labels
+        dl.append(datadict)
 
-        yield batch, labels
+    return dl
 
-    # return datalist
 
 def build_dataset(words, n_words):
     """Process raw inputs into a dataset."""
