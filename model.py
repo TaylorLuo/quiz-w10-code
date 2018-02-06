@@ -33,55 +33,53 @@ class Model():
                 embed = tf.constant(embedding, name='embedding')
             else:
                 # if not, initialize an embedding and train it.
+                # 构建一个矩阵，就叫embedding好了，尺寸为[num_words, dim_embedding]，
+                # 分别表示词典中单词数目，以及要转化成的向量的维度。一般来说，向量维度越高，能够表现的信息也就越丰富。
                 embed = tf.get_variable(
-                    'embedding', [self.num_words, self.dim_embedding])
+                    'embedding', [self.num_words, self.dim_embedding])   #[5000,128]
                 tf.summary.histogram('embeddings', embed)
 
-            data = tf.nn.embedding_lookup(embed, self.X)
+            # 使用tf.nn.embedding_lookup(embedding, input_ids)
+            # 使用tf.nn.embedding_lookup(embedding, train_inputs)查找输入train_input对应的embed
+            data = tf.nn.embedding_lookup(embed, self.X)  # input
 
+
+
+        ######################
+        # My Code here start #
+        ######################
+        outputs_tensor = []
         with tf.variable_scope('rnn'):
-            ##################
-            # My Code here
-            ##################
 
-            outputs_tensor = []
             lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self.dim_embedding, forget_bias=0.0, state_is_tuple=True)
-            # if self.keep_prob < 1:  # 在外面包裹一层dropout
-            #     lstm_cell = tf.nn.rnn_cell.DropoutWrapper(
-            #         lstm_cell, output_keep_prob=self.keep_prob)
             cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * self.rnn_layers, state_is_tuple=True)  # 多层lstm cell 堆叠起来
+            print(cell.state_size)
             self.state_tensor = cell.zero_state(self.batch_size, tf.float32)  # 参数初始化,rnn_cell.RNNCell.zero_state
-            state = self.state_tensor  # state 表示 各个batch中的状态
+            outputs, last_state = tf.nn.dynamic_rnn(cell, data, initial_state=self.state_tensor)
+            self.outputs_state_tensor = last_state
 
-            for time_step in range(self.num_steps):
-                if time_step > 0: tf.get_variable_scope().reuse_variables()
-                # cell_out: [batch, hidden_size]
-                (cell_output, state) = cell(data[:, time_step, :], state)
-                outputs_tensor.append(cell_output)  # output: shape[num_steps][batch,hidden_size]
+        ####################
+        # My Code here end #
+        ####################
 
-            self.outputs_state_tensor = state
-
-
-
-        # concate every time step
-        seq_output = tf.concat(outputs_tensor, 1)
-
-        # flatten it
-        seq_output_final = tf.reshape(seq_output, [-1, self.dim_embedding])
+        outputs = tf.reshape(outputs, [-1, self.dim_embedding])
 
         with tf.variable_scope('softmax'):
-            ##################
-            # My Code here
-            ##################
+            ######################
+            # My Code here start #
+            ######################
             # softmax_w , shape=[hidden_size, vocab_size], 用于将distributed表示的单词转化为one-hot表示
             softmax_w = tf.get_variable(
                 "softmax_w", [self.dim_embedding, self.num_words], dtype=tf.float32)
             softmax_b = tf.get_variable("softmax_b", [self.num_words], dtype=tf.float32)
             # [batch*numsteps, vocab_size] 从隐藏语义转化成完全表示
-            logits = tf.matmul(seq_output_final, softmax_w) + softmax_b
+            logits = tf.matmul(outputs, softmax_w) + softmax_b
 
 
 
+        ####################
+        # My Code here end #
+        ####################
         tf.summary.histogram('logits', logits)
 
         self.predictions = tf.nn.softmax(logits, name='predictions')

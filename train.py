@@ -58,8 +58,7 @@ with tf.Session() as sess:
             ##################
             # My Code here
             ##################
-            # feed_dict = {train_inputs: datadict['train_inputs'], train_labels: datadict['train_labels']}
-            feed_dict = {model.X: batch, model.Y: labels}
+            feed_dict = {model.X: batch, model.Y: labels, model.state_tensor:state}
             gs, _, state, l, summary_string = sess.run(
                 [model.global_step, model.optimizer, model.outputs_state_tensor, model.loss, model.merged_summary_op], feed_dict=feed_dict)
             summary_string_writer.add_summary(summary_string, gs)
