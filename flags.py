@@ -12,7 +12,7 @@ current_time = datetime.datetime.now(tz)
 
 def parse_args(check=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_dir', type=str, default='./rnn_log',
+    parser.add_argument('--output_dir', type=str, default='/data/luoweile/week10lstm-rnnlog', # /media/taylor/新加卷/002---study/rnn_log   /data/luoweile/week10lstm-rnnlog
                         help='path to save log and checkpoint.')
 
     parser.add_argument('--text', type=str, default='QuanSongCi.txt',
@@ -30,7 +30,7 @@ def parse_args(check=True):
     parser.add_argument('--reverse_dictionary', type=str, default='reverse_dictionary.json',
                         help='path to reverse_dictionary.json.')
 
-    parser.add_argument('--learning_rate', type=float, default=0.0001,
+    parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='learning rate')
 
     FLAGS, unparsed = parser.parse_known_args()

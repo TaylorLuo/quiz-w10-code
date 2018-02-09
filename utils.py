@@ -43,8 +43,8 @@ def get_train_data(vocabulary, batch_size, num_steps):
     data, count, dictionary, reverse_dictionary = build_dataset(vocabulary,
                                                                 vocabulary_size)
     del vocabulary  # Hint to reduce memory.
-    print('Most common words (+UNK)', count[:5])
-    print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
+    # print('Most common words (+UNK)', count[:5])
+    # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
     # datalist = list()
 
     batch = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
@@ -99,9 +99,9 @@ def build_dataset(words, n_words):
     count[0][1] = unk_count
     reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 
-    with open('dictionary.json', 'w') as file_object:
-        json.dump(dictionary, file_object)
-    with open('reverse_dictionary.json', 'w') as file_object:
-        json.dump(reversed_dictionary, file_object)
+    # with open('dictionary.json', 'w') as file_object:
+    #     json.dump(dictionary, file_object)
+    # with open('reverse_dictionary.json', 'w') as file_object:
+    #     json.dump(reversed_dictionary, file_object)
 
     return data, count, dictionary, reversed_dictionary

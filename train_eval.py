@@ -20,7 +20,7 @@ if __name__ == '__main__':
         except:
             pass
 
-    for i in range(3000):
+    for i in range(1000):
        # train 1 epoch
         print('################    train    ################')
         p = os.popen('python ./train.py' + cmd)
