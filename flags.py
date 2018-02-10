@@ -12,7 +12,7 @@ current_time = datetime.datetime.now(tz)
 
 def parse_args(check=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_dir', type=str, default='/media/taylor/新加卷/002---study/rnn_log', # /media/taylor/新加卷/002---study/rnn_log   /data/luoweile/week10lstm-rnnlog
+    parser.add_argument('--output_dir', type=str, default='/data/luoweile/week10lstm-rnnlog', # /media/taylor/新加卷/002---study/rnn_log   /data/luoweile/week10lstm-rnnlog
                         help='path to save log and checkpoint.')
 
     parser.add_argument('--text', type=str, default='QuanSongCi.txt',
