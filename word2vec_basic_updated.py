@@ -234,7 +234,7 @@ with graph.as_default():
   normalized_embeddings = embeddings / norm
   # 获取16个验证单词的词向量
   valid_embeddings = tf.nn.embedding_lookup(normalized_embeddings, valid_dataset)
-  # 计算验证单词的嵌入向量与词汇表中所有单词的相似性
+  # 计算16个验证单词的嵌入向量与词汇表中所有单词的相似性
   # 对矩阵a和矩阵b进行乘法，也就是a * b。两个参数输入必须是矩阵形式（张量的行列大于2），符合矩阵乘法的前后矩阵行列形式，
   # 包括转置之后。两个矩阵必须具有相同的数据类型，支持的数据类型：float16, float32, float64, int32, complex64, complex128。
   # 也可以通过参数 transpose_a或transpose_b来设置矩阵在乘法之前进行转置，这时这些标志位应该设置为True，默认是False。

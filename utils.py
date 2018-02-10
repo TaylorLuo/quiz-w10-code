@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import collections
-import random
 
 import numpy as np
-from six.moves import xrange
 import json
+from flags import parse_args
 
 
 def read_data(filename):
@@ -29,58 +28,13 @@ def index_data(sentences, dictionary):
     return index.reshape(shape)
 
 
+FLAGS, unparsed = parse_args()
+vocabulary = read_data(FLAGS.text)
+num_classes = len(vocabulary)
 vocabulary_size = 5000
 data_index = 0
-skip_window = 1       # How many words to consider left and right.
-num_skips = 2         # How many times to reuse an input to generate a label.
-
-def get_train_data(vocabulary, batch_size, num_steps):
-    ##################
-    # My Code here
-    ##################
-
-    dl = list()
-    data, count, dictionary, reverse_dictionary = build_dataset(vocabulary,
-                                                                vocabulary_size)
-    del vocabulary  # Hint to reduce memory.
-    # print('Most common words (+UNK)', count[:5])
-    # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
-    # datalist = list()
-
-    batch = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
-    labels = np.ndarray(shape=(batch_size, num_steps), dtype=np.int32)
-    for step in xrange(num_steps):
-        datadict = {}
-        global data_index
-        # assert batch_size % num_steps == 0
-        # assert num_steps <= 2 * skip_window
-        span = 2 * skip_window + 1  # [ skip_window target skip_window ]
-        buffer = collections.deque(maxlen=span)
-
-        if data_index + span > len(data):
-            data_index = 0
-        buffer.extend(data[data_index:data_index + span])
-        data_index += span
-        for i in range(batch_size // num_skips):
-            context_words = [w for w in range(span) if w != skip_window]
-            words_to_use = random.sample(context_words, num_skips)
-            for j, context_word in enumerate(words_to_use):
-                batch[i * num_skips + j, step] = buffer[skip_window]
-                labels[i * num_skips + j, step] = buffer[context_word]
-            if data_index == len(data):
-                buffer[:] = data[:span]
-                data_index = span
-            else:
-                buffer.append(data[data_index])
-                data_index += 1
-        # Backtrack a little bit to avoid skipping words in the end of a batch
-        data_index = (data_index + len(data) - span) % len(data)
-        datadict['train_inputs'] = batch
-        datadict['train_labels'] = labels
-        dl.append(datadict)
-
-    return dl
-
+skip_window = 1  # How many words to consider left and right.
+num_skips = 2  # How many times to reuse an input to generate a label.
 
 def build_dataset(words, n_words):
     """Process raw inputs into a dataset."""
@@ -99,9 +53,46 @@ def build_dataset(words, n_words):
     count[0][1] = unk_count
     reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 
-    # with open('dictionary.json', 'w') as file_object:
-    #     json.dump(dictionary, file_object)
-    # with open('reverse_dictionary.json', 'w') as file_object:
-    #     json.dump(reversed_dictionary, file_object)
+    with open('dictionary.json', 'w') as file_object:
+        json.dump(dictionary, file_object)
+    with open('reverse_dictionary.json', 'w') as file_object:
+        json.dump(reversed_dictionary, file_object)
 
     return data, count, dictionary, reversed_dictionary
+
+
+data, count, dictionary, reverse_dictionary = build_dataset(vocabulary,
+                                                            vocabulary_size)
+
+raw_x = data
+raw_y = data[1:]
+raw_y.append(num_classes-1)
+
+del vocabulary  # Hint to reduce memory.
+
+def get_train_data(vocabulary, batch_size, num_steps):
+    ##################
+    # My Code here
+    ##################
+
+    # print('Most common words (+UNK)', count[:5])
+    # print('Sample data', data[:10], [reverse_dictionary[i] for i in data[:10]])
+
+    # partition raw data into batches and stak them vertically in a data matrix
+    batch_partition_length = len(vocabulary) // batch_size
+    data_x = np.zeros([batch_size, batch_partition_length], dtype=np.int32)
+    data_y = np.zeros([batch_size, batch_partition_length], dtype=np.int32)
+    # do partition
+    for i in range(batch_size):
+        data_x[i] = raw_x[batch_partition_length * i: batch_partition_length * (i + 1)]
+        data_y[i] = raw_y[batch_partition_length * i: batch_partition_length * (i + 1)]
+    # do epoch
+    epoch_size = batch_partition_length // num_steps
+
+    for i in range(epoch_size):
+        x = data_x[:, i * num_steps:(i + 1) * num_steps]
+        y = data_y[:, i * num_steps:(i + 1) * num_steps]
+        yield (x, y)
+
+
+
