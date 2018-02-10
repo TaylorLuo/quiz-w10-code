@@ -53,10 +53,10 @@ def build_dataset(words, n_words):
     count[0][1] = unk_count
     reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 
-    with open('dictionary.json', 'w') as file_object:
-        json.dump(dictionary, file_object)
-    with open('reverse_dictionary.json', 'w') as file_object:
-        json.dump(reversed_dictionary, file_object)
+    # with open('dictionary.json', 'w') as file_object:
+    #     json.dump(dictionary, file_object)
+    # with open('reverse_dictionary.json', 'w') as file_object:
+    #     json.dump(reversed_dictionary, file_object)
 
     return data, count, dictionary, reversed_dictionary
 
