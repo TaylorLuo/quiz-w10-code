@@ -30,7 +30,7 @@ def parse_args(check=True):
     parser.add_argument('--reverse_dictionary', type=str, default='reverse_dictionary.json',
                         help='path to reverse_dictionary.json.')
 
-    parser.add_argument('--learning_rate', type=float, default=0.0006,
+    parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='learning rate')
 
     FLAGS, unparsed = parser.parse_known_args()

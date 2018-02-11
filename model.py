@@ -42,6 +42,8 @@ class Model():
             # 使用tf.nn.embedding_lookup(embedding, input_ids)
             # 使用tf.nn.embedding_lookup(embedding, train_inputs)查找输入train_input对应的embed
             data = tf.nn.embedding_lookup(embed, self.X)  # input
+            # 如果keep_prob<1， 那么还需要对输入进行dropout。不过这边跟rnn的dropout又有所不同，这边使用tf.nn.dropout
+            data = tf.nn.dropout(data, self.keep_prob)
 
 
 
@@ -52,12 +54,13 @@ class Model():
         with tf.variable_scope('rnn'):
 
             lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self.dim_embedding, forget_bias=0.0, state_is_tuple=True)
+            # 在外面包裹一层dropout
+            lstm_cell = tf.nn.rnn_cell.DropoutWrapper(lstm_cell, output_keep_prob=self.keep_prob)
             cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell] * self.rnn_layers, state_is_tuple=True)  # 多层lstm cell 堆叠起来
             print(cell.state_size)
             self.state_tensor = cell.zero_state(self.batch_size, tf.float32)  # 参数初始化,rnn_cell.RNNCell.zero_state
             # outputs [batch_size, num_steps, dim_embedding] 即[128, 32, 128]
-            outputs, last_state = tf.nn.dynamic_rnn(cell, data, initial_state=self.state_tensor)
-            self.outputs_state_tensor = last_state
+            outputs, self.outputs_state_tensor = tf.nn.dynamic_rnn(cell, data, initial_state=self.state_tensor)
 
 
         # concate every time step
