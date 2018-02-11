@@ -60,7 +60,7 @@ with tf.Session() as sess:
             ##################
             # My Code here
             ##################
-            feed_dict = {model.X: X, model.Y: Y, model.state_tensor: state, model.keep_prob: 0.8}
+            feed_dict = {model.X: X, model.Y: Y, model.state_tensor: state, model.keep_prob: FLAGS.keep_prob}
             gs, _, state, l, summary_string = sess.run(
                 [model.global_step, model.optimizer, model.outputs_state_tensor, model.loss, model.merged_summary_op], feed_dict=feed_dict)
             summary_string_writer.add_summary(summary_string, gs)

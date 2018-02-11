@@ -43,7 +43,7 @@ class Model():
             # 使用tf.nn.embedding_lookup(embedding, train_inputs)查找输入train_input对应的embed
             data = tf.nn.embedding_lookup(embed, self.X)  # input
             # 如果keep_prob<1， 那么还需要对输入进行dropout。不过这边跟rnn的dropout又有所不同，这边使用tf.nn.dropout
-            data = tf.nn.dropout(data, self.keep_prob)
+            # data = tf.nn.dropout(data, self.keep_prob)
 
 
 

@@ -33,6 +33,9 @@ def parse_args(check=True):
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='learning rate')
 
+    parser.add_argument('--keep_prob', type=float, default=0.9,
+                        help='keep_prob')
+
     FLAGS, unparsed = parser.parse_known_args()
 
     return FLAGS, unparsed
