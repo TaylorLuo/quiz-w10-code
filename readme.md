@@ -69,7 +69,7 @@ Extension:image embedding, video embedding
 
 tinymind模型地址:https://www.tinymind.com/executions/atwr9m3n
 
-但是tinymind中文显示有问题，我把本地运行日志截图上传到https://gitee.com/taylor35/quiz-w10-code/attach_files，请看附加run_log.png
+但是tinymind中文显示有问题，我把本地运行日志截图上传到https://gitee.com/taylor35/quiz-w10-code/attach_files ,请看附加run_log.png
 
 RNN的理解：
 
