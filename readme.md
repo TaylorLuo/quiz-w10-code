@@ -54,7 +54,7 @@ Extension:image embedding, video embedding
 
 2.实验代码请看word2vec_basic_update.py(由word2vec_basic.py改编而来)
 
-实验结果请看https://gitee.com/taylor35/quiz-w10-code附件tsne.png
+实验结果请看https://gitee.com/taylor35/quiz-w10-code/attach_files ,附件tsne.png
 
 原理分析：
 语义本质：它可以描述两个概念之间的语义关系，而这种语义关系完全是通过文档样本的学习来实现的，它不要求有任何对现实世界的语义建模输入（例如何为国家、国力、接壤等）。
@@ -69,7 +69,7 @@ Extension:image embedding, video embedding
 
 tinymind模型地址:https://www.tinymind.com/executions/atwr9m3n
 
-但是tinymind中文显示有问题，我把本地运行日志截图上传到https://gitee.com/taylor35/quiz-w10-code，请看附加run_log.png
+但是tinymind中文显示有问题，我把本地运行日志截图上传到https://gitee.com/taylor35/quiz-w10-code/attach_files，请看附加run_log.png
 
 RNN的理解：
 
